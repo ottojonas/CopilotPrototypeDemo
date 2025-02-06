@@ -1,0 +1,17 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/copilot/declarative-agent/v1.2/schema.json",
+  "version": "v1.2",
+  "name": "PrototypeDemo",
+  "description": "Declarative agent created with Teams Toolkit",
+  "instructions": "$[file('instruction.txt')]",
+  "conversation_starters": [
+    {
+      "title": "Demo Title 1",
+      "text": "Demo Text 1"
+    },
+    {
+      "title": "Demo Title 2",
+      "text": "Demo Title 2"
+    }
+  ]
+}
