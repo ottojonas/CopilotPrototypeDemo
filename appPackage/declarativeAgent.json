@@ -6,12 +6,34 @@
   "instructions": "$[file('instruction.txt')]",
   "conversation_starters": [
     {
-      "title": "Demo Title 1",
-      "text": "Demo Text 1"
+      "title": "Capabilities",
+      "text": "Find out what the bot can the bot do"
     },
     {
-      "title": "Demo Title 2",
-      "text": "Demo Title 2"
+      "title": "Limitations",
+      "text": "Find out the limitations of the bot"
+    },
+    {
+      "title": "Development Possibilities",
+      "text": "What can the bots be made to do and developed into"
+    }
+  ],
+  "capabilities": [
+    {
+      "name": "WebSearch",
+      "sites": [
+        {
+          "url": "https://purelydynamics.co.uk/"
+        }
+      ]
+    },
+    {
+      "name": "OneDriveAndSharePoint",
+      "items_by_url": [
+        {
+          "url": "https://sharepointurl.com/placeholder/placeholer"
+        }
+      ]
     }
   ]
 }
