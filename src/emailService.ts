@@ -119,7 +119,7 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
     // }
     return isAllowedDomain || hasRequestedItems;
   });
-  filteredEmails.forEach((email: any) => {g
+  filteredEmails.forEach((email: any) => {
     const senderAddress = email.from.emailAddress.address;
     const subject = email.subject;
     const requestedItems = extractRequestedItems(email.bodyPreview, items);
