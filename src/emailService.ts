@@ -1,7 +1,5 @@
 import { config } from "./config";
 import { Client } from "@microsoft/microsoft-graph-client";
-import { TokenCredentialAuthenticationProvider } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials";
-import { ClientSecretCredential } from "@azure/identity";
 import { readCustomerData, readItemData } from "./csvService";
 import {
   ConfidentialClientApplication,
@@ -108,10 +106,29 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
     const senderDomain = extractDomain(email.from.emailAddress.address);
     const requestedItems = extractRequestedItems(email.bodyPreview, items);
     const requestedItemNames = requestedItems.map((item) => item.name);
-    return (
-      allowedDomains.includes(senderDomain) ||
-      requestedItemNames.some((name) => itemNames.includes(name))
+    const isAllowedDomain = allowedDomains.includes(senderDomain);
+    const hasRequestedItems = requestedItemNames.some((name) =>
+      itemNames.includes(name)
     );
+    // if (hasRequestedItems) {
+    //   console.log(
+    //     `email from: ${
+    //       email.from.emailAddress.address
+    //     }, matched items: ${requestedItemNames.join(", ")}`
+    //   );
+    // }
+    return isAllowedDomain || hasRequestedItems;
+  });
+  filteredEmails.forEach((email: any) => {
+    const senderAddress = email.from.emailAddress.address;
+    const subject = email.subject;
+    const requestedItems = extractRequestedItems(email.bodyPreview, items);
+    const requestedItemNames = requestedItems.map((item) => item.name);
+    console.log(`Stored Email:
+      From: ${senderAddress}
+      Subject: ${subject}
+      Matched Items: ${requestedItemNames.join(", ")}
+    `);
   });
   const storedEmails = filteredEmails;
   return storedEmails;
@@ -148,7 +165,7 @@ async function sendReplyEmail(
   await client.api(`/me/messages/${email.id}/reply`).post(reply);
 }
 
-// Test email connection
+// function to check email connection
 async function testEmailConnection() {
   try {
     const authCodeUrlParameters: AuthorizationUrlRequest = {
@@ -169,7 +186,25 @@ async function testEmailConnection() {
 
     const accessToken = await getAccessToken(authCode);
     const emails = await getEmailsFromOtto(accessToken);
-    console.log("Successfully fetched emails: ", emails);
+
+    // Read customer data and extract allowed domains
+    const customers = await readCustomerData("demo_data/democustomerdata.csv");
+    const allowedDomains = customers.map((customer) =>
+      extractDomain(customer.email)
+    );
+
+    //console.log("Allowed domains: ", allowedDomains);
+
+    // Check if sender's domain matches any allowed domain
+    //emails.forEach((email) => {
+    // const senderDomain = extractDomain(email.from.emailAddress.address);
+    // const isAllowedDomain = allowedDomains.includes(senderDomain);
+    // console.log(
+    //  `Email from: ${email.from.emailAddress.address}, Domain: ${senderDomain}, Allowed: ${isAllowedDomain}`
+    //);
+    //});
+
+    // console.log("Successfully fetched emails: ", emails);
   } catch (error) {
     console.error("Error fetching emails: ", error);
   }
