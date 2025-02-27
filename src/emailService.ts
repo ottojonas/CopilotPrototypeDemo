@@ -4,9 +4,9 @@ import { TokenCredentialAuthenticationProvider } from "@microsoft/microsoft-grap
 import { ClientSecretCredential } from "@azure/identity";
 import { readCSV } from "./csvService";
 import {
-ConfidentialClientApplication,
-AuthorizationCodeRequest,
-AuthorizationUrlRequest,
+  ConfidentialClientApplication,
+  AuthorizationCodeRequest,
+  AuthorizationUrlRequest,
 } from "@azure/msal-node";
 import { extractRequestedItems, generateReplyEmail } from "./utils";
 import crypto from "crypto";
@@ -37,11 +37,11 @@ if (!config.clientId || !config.clientSecret) {
 }
 
 const msalConfig = {
-auth: {
+  auth: {
     clientId: config.clientId as string,
     clientSecret: config.clientSecret as string,
     authority: `https://login.microsoftonline.com/${config.tenantId}`,
-},
+  },
 };
 
 const pca = new ConfidentialClientApplication(msalConfig);
@@ -94,7 +94,7 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
   });
   const response = await client
     .api(`/users/${config.userId}/messages`)
-    .filter("from/emailAddress/address eq 'otto@purelydynamics.co.uk'")
+    // .filter("from/emailAddress/address eq 'otto@purelydynamics.co.uk'")
     .get();
   return response.value;
 }
