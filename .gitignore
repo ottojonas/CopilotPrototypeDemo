@@ -3,6 +3,7 @@ env/.env.*.user
 env/.env.local
 .localConfigs
 appPackage/build
+env/
 
 # dependencies
 node_modules/
@@ -12,4 +13,3 @@ node_modules/
 .deployment
 .DS_Store
 /demo_data
-/node_modules
