@@ -97,14 +97,16 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
   const allowedDomains = customers.map((customer) =>
     extractDomain(customer.email)
   );
+
+  const items = await readItemData("demo_data/demoitemdata.csv");
   const response = await client
-    .api(`/users/${config.userId}/messages`)
-    // .filter("from/emailAddress/address eq 'otto@purelydynamics.co.uk'")
+    .api(`/users/${config.userId}/mailFolders/inbox/messages`)
     .get();
 
   const filteredEmails = response.value.filter((email: any) => {
     const senderDomain = extractDomain(email.from.emailAddress.address);
-    return allowedDomains.includes(senderDomain);
+    const requestedItems = extractRequestedItems(email.body.content, items);
+    return allowedDomains.includes(senderDomain) || requestedItems.length > 0;
   });
   return filteredEmails;
 }
