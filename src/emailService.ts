@@ -9,10 +9,16 @@ const tenantId = process.env.TENANT_ID;
 const clientId = process.env.CLIENT_ID;
 const clientSecret = process.env.CLIENT_SECRET;
 
-if (!tenantId || !clientId || !clientSecret) {
-  throw new Error(
-    "Missing required environment variables: TENANT_ID, CLIENT_ID, CLIENT_SECRET"
-  );
+if (!tenantId) {
+  throw new Error("Missing tenantId environmental variable");
+}
+
+if (!clientId) {
+  throw new Error("Missing clientId environmental variable");
+}
+
+if (!clientSecret) {
+  throw new Error("Missing clientSecret environemental variable");
 }
 
 const credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
