@@ -1,16 +1,18 @@
 import { config } from "./config";
-import { Client } from "@microsoft/microsoft-graph-client";
 import { readCustomerData, readItemData } from "./csvService";
+import { extractRequestedItems, generateReplyEmail } from "./utils";
 import {
   ConfidentialClientApplication,
   AuthorizationCodeRequest,
   AuthorizationUrlRequest,
+  RefreshTokenRequest,
 } from "@azure/msal-node";
-import { extractRequestedItems, generateReplyEmail } from "./utils";
+import { Client } from "@microsoft/microsoft-graph-client";
 import crypto from "crypto";
 import http from "http";
 import url from "url";
-import { Item } from "./types";
+import fs from "fs";
+import path from "path";
 
 // Utility functions
 function base64URLEncode(str: Buffer) {
@@ -43,6 +45,8 @@ const msalConfig = {
 };
 
 const pca = new ConfidentialClientApplication(msalConfig);
+
+const tokenCachePath = path.join(__dirname, "../env/tokenCache.json");
 
 // Capture authorization code from redirect URI
 async function captureAuthCodeFromRedirect(): Promise<string> {
@@ -80,7 +84,42 @@ async function getAccessToken(authCode: string): Promise<string> {
   };
 
   const response = await pca.acquireTokenByCode(tokenRequest);
-  return response.accessToken;
+  saveToken(response);
+  if (response) {
+    return response.accessToken;
+  } else {
+    throw new Error("Failed to acquire token.");
+  }
+}
+
+// Save token to file
+function saveToken(tokenResponse: any) {
+  fs.writeFileSync(tokenCachePath, JSON.stringify(tokenResponse));
+}
+
+// Load token from file
+function loadToken(): any {
+  if (fs.existsSync(tokenCachePath)) {
+    const tokenData = fs.readFileSync(tokenCachePath, "utf-8");
+    return JSON.parse(tokenData);
+  }
+  return null;
+}
+
+// Refresh access token
+async function refreshAccessToken(refreshToken: string): Promise<string> {
+  const tokenRequest: RefreshTokenRequest = {
+    refreshToken: refreshToken,
+    scopes: ["Mail.Read", "Mail.Send"],
+  };
+
+  const response = await pca.acquireTokenByRefreshToken(tokenRequest);
+  saveToken(response);
+  if (response) {
+    return response.accessToken;
+  } else {
+    throw new Error("Failed to fetch token ");
+  }
 }
 
 // Get emails from Otto
@@ -114,13 +153,18 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
   });
   filteredEmails.forEach((email: any) => {
     const senderAddress = email.from.emailAddress.address;
+    const senderDomain = extractDomain(senderAddress);
     const subject = email.subject;
     const requestedItems = extractRequestedItems(email.bodyPreview, items);
     const requestedItemNames = requestedItems.map((item) => item.name);
+    const requestedItemPrices = requestedItems.map((item) => item.price);
+    const isAllowedDomain = allowedDomains.includes(senderDomain);
     console.log(`Stored Email:
       From: ${senderAddress}
       Subject: ${subject}
       Matched Items: ${requestedItemNames.join(", ")}
+      Approx Price of Item: ${requestedItemPrices}
+      Is Allowed Domain: ${isAllowedDomain}
     `);
   });
   const storedEmails = filteredEmails;
@@ -133,29 +177,35 @@ async function sendReplyEmail(
   email: any,
   replyBody: string
 ) {
-  const client = Client.init({
-    authProvider: (done) => {
-      done(null, accessToken);
-    },
-  });
-  const reply = {
-    message: {
-      subject: `Re: ${email.subject}`,
-      body: {
-        contentType: "text",
-        content: replyBody,
+  try {
+    const client = Client.init({
+      authProvider: (done) => {
+        done(null, accessToken);
       },
-      toRecipients: [
-        {
-          emailAddress: {
-            address: email.from.emailAddress.address,
-          },
+    });
+    const reply = {
+      message: {
+        subject: `Re: ${email.subject}`,
+        body: {
+          contentType: "text",
+          content: replyBody,
         },
-      ],
-    },
-    saveToSentItems: true,
-  };
-  await client.api(`/me/messages/${email.id}/reply`).post(reply);
+        toRecipients: [
+          {
+            emailAddress: {
+              address: email.from.emailAddress.address,
+            },
+          },
+        ],
+      },
+      saveToSentItems: true,
+    };
+    console.log(`Sending reply to: ${email.from.emailAddress.address}`);
+    await client.api(`/me/messages/${email.id}/reply`).post(reply);
+    console.log(`Reply sent to: ${email.from.emailAddress.address}`);
+  } catch (error) {
+    console.error("Error sending reply email: ", error);
+  }
 }
 
 // function to check email connection
@@ -212,21 +262,73 @@ function extractDomain(email: string): string {
 
 // Process emails
 export async function processEmails() {
-  const authCode = await promptForAuthCode();
-  const accessToken = await getAccessToken(authCode);
-  const items = await readItemData("demo_data/demoitemdata.csv");
-  const customers = await readCustomerData("demo_data/democustomerdata.csv");
+  try {
+    let tokenResponse = loadToken();
+    let accessToken: string;
 
-  const customerDomains = customers.map((customer) =>
-    extractDomain(customer.email)
-  );
+    if (tokenResponse) {
+      console.log("Token loaded from cache.");
+      if (
+        tokenResponse.expiresOn &&
+        new Date(tokenResponse.expiresOn) > new Date()
+      ) {
+        accessToken = tokenResponse.accessToken;
+      } else {
+        console.log("Token expired, refreshing...");
+        accessToken = await refreshAccessToken(tokenResponse.refreshToken);
+      }
+    } else {
+      const authCode = await promptForAuthCode();
+      accessToken = await getAccessToken(authCode);
+    }
 
-  const emails = await getEmailsFromOtto(accessToken);
-  for (const email of emails) {
-    const requestedItems = extractRequestedItems(email.bodyPreview, items);
-    const replyBody = generateReplyEmail(requestedItems);
-    await sendReplyEmail(accessToken, email, replyBody);
+    const items = await readItemData("demo_data/demoitemdata.csv");
+    const customers = await readCustomerData("demo_data/democustomerdata.csv");
+
+    const customerDomains = customers.map((customer) =>
+      extractDomain(customer.email)
+    );
+
+    console.log("Fetching emails...");
+    const emails = await getEmailsFromOtto(accessToken);
+    console.log(`Fetched ${emails.length} emails.`);
+
+    for (const email of emails) {
+      console.log(`Processing email from: ${email.from.emailAddress.address}`);
+      const requestedItems = extractRequestedItems(email.bodyPreview, items);
+      console.log(
+        `Requested items: ${requestedItems.map((item) => item.name).join(", ")}`
+      );
+
+      if (requestedItems.length > 0) {
+        const replyBody = generateReplyEmail(requestedItems);
+        console.log(`Generated reply: ${replyBody}`);
+
+        await sendReplyEmail(accessToken, email, replyBody);
+        console.log(`Sent reply to: ${email.from.emailAddress.address}`);
+
+        await markEmailAsReplied(accessToken, email);
+        console.log(`Marked email as replied: ${email.id}`);
+      } else {
+        console.log(
+          `No requested items found in email from: ${email.from.emailAddress.address}`
+        );
+      }
+    }
+  } catch (error) {
+    console.error("Error processing emails: ", error);
   }
+}
+
+async function markEmailAsReplied(accessToken: string, email: any) {
+  const client = Client.init({
+    authProvider: (done) => {
+      done(null, accessToken);
+    },
+  });
+  await client.api(`/me/messages/${email.id}/move`).post({
+    destinationId: `/users/${config.userId}/mailFolders/sent`,
+  });
 }
 
 testEmailConnection();
