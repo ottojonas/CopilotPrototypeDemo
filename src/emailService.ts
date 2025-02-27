@@ -28,10 +28,11 @@ const authProvider = new TokenCredentialAuthenticationProvider(credential, {
 });
 
 const client = Client.initWithMiddleware({ authProvider });
+const userId = "otto@purelydynamics.co.uk";
 
 async function getEmailsFromOtto(): Promise<any[]> {
   const response = await client
-    .api("/me/messages")
+    .api(`/users/${userId}/messages`)
     .filter("from/emailAddress/address eq 'otto@purelydynamics.co.uk'")
     .get();
   return response.value;
