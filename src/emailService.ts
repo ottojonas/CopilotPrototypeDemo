@@ -24,7 +24,7 @@ if (!clientSecret) {
 const credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
 
 const authProvider = new TokenCredentialAuthenticationProvider(credential, {
-  scopes: ["Mail.Read", "Mail.Send"],
+  scopes: ["https://graph.microsoft.com/.default"],
 });
 
 const client = Client.initWithMiddleware({ authProvider });
