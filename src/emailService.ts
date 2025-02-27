@@ -2,7 +2,7 @@ import { config } from "./config";
 import { Client } from "@microsoft/microsoft-graph-client";
 import { TokenCredentialAuthenticationProvider } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials";
 import { ClientSecretCredential } from "@azure/identity";
-import { readCSV } from "./csvService";
+import { readCustomerData, readItemData } from "./csvService";
 import {
   ConfidentialClientApplication,
   AuthorizationCodeRequest,
@@ -173,11 +173,21 @@ async function promptForAuthCode(): Promise<string> {
   });
 }
 
+function extractDomain(email: string): string {
+  return email.substring(email.lastIndexOf("@") + 1);
+}
+
 // Process emails
 export async function processEmails() {
   const authCode = await promptForAuthCode();
   const accessToken = await getAccessToken(authCode);
-  const items = await readCSV("demo_data/demodata.csv");
+  const items = await readItemData("demo_data/demoitemdata.csv");
+  const customers = await readCustomerData("demo_data/democustomerdata.csv");
+
+  const customerDomains = customers.map((customer) =>
+    extractDomain(customer.email)
+  );
+
   const emails = await getEmailsFromOtto(accessToken);
   for (const email of emails) {
     const requestedItems = extractRequestedItems(email.body.content, items);
