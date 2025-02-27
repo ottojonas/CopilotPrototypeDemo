@@ -110,13 +110,6 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
     const hasRequestedItems = requestedItemNames.some((name) =>
       itemNames.includes(name)
     );
-    // if (hasRequestedItems) {
-    //   console.log(
-    //     `email from: ${
-    //       email.from.emailAddress.address
-    //     }, matched items: ${requestedItemNames.join(", ")}`
-    //   );
-    // }
     return isAllowedDomain || hasRequestedItems;
   });
   filteredEmails.forEach((email: any) => {
@@ -192,19 +185,6 @@ async function testEmailConnection() {
     const allowedDomains = customers.map((customer) =>
       extractDomain(customer.email)
     );
-
-    //console.log("Allowed domains: ", allowedDomains);
-
-    // Check if sender's domain matches any allowed domain
-    //emails.forEach((email) => {
-    // const senderDomain = extractDomain(email.from.emailAddress.address);
-    // const isAllowedDomain = allowedDomains.includes(senderDomain);
-    // console.log(
-    //  `Email from: ${email.from.emailAddress.address}, Domain: ${senderDomain}, Allowed: ${isAllowedDomain}`
-    //);
-    //});
-
-    // console.log("Successfully fetched emails: ", emails);
   } catch (error) {
     console.error("Error fetching emails: ", error);
   }
