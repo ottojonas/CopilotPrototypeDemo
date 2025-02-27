@@ -12,3 +12,4 @@ node_modules/
 .deployment
 .DS_Store
 /demo_data
+/node_modules
