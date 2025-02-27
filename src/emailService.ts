@@ -52,6 +52,17 @@ async function sendReplyEmail(email: any, replyBody: string) {
   await client.api(`/me/messages/${email.id}/reply`).post(reply);
 }
 
+async function testEmailConnection() {
+  try {
+    const emails = await getEmailsFromOtto();
+    console.log("Succssfully fetched emails: ", emails);
+  } catch (error) {
+    console.error("Error fetching emails: ", error);
+  }
+}
+
+testEmailConnection();
+
 export async function processEmails() {
   const items = await readCSV("demo_data/demodata.csv");
   const emails = await getEmailsFromOtto();
