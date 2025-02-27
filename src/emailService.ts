@@ -99,16 +99,22 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
   );
 
   const items = await readItemData("demo_data/demoitemdata.csv");
+  const itemNames = items.map((item) => item.name);
   const response = await client
     .api(`/users/${config.userId}/mailFolders/inbox/messages`)
     .get();
 
   const filteredEmails = response.value.filter((email: any) => {
     const senderDomain = extractDomain(email.from.emailAddress.address);
-    const requestedItems = extractRequestedItems(email.body.content, items);
-    return allowedDomains.includes(senderDomain) || requestedItems.length > 0;
+    const requestedItems = extractRequestedItems(email.bodyPreview, items);
+    const requestedItemNames = requestedItems.map((item) => item.name);
+    return (
+      allowedDomains.includes(senderDomain) ||
+      requestedItemNames.some((name) => itemNames.includes(name))
+    );
   });
-  return filteredEmails;
+  const storedEmails = filteredEmails;
+  return storedEmails;
 }
 
 // Send reply email
@@ -202,7 +208,7 @@ export async function processEmails() {
 
   const emails = await getEmailsFromOtto(accessToken);
   for (const email of emails) {
-    const requestedItems = extractRequestedItems(email.body.content, items);
+    const requestedItems = extractRequestedItems(email.bodyPreview, items);
     const replyBody = generateReplyEmail(requestedItems);
     await sendReplyEmail(accessToken, email, replyBody);
   }
