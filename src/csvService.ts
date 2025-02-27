@@ -1,8 +1,25 @@
 import * as fs from "fs";
 import csv from "csv-parser";
-import { Item } from "./types";
+import { Item, Customer } from "./types";
 
-export function readCSV(filePath: string): Promise<Item[]> {
+export function readCustomerData(filePath: string): Promise<Customer[]> {
+  return new Promise((resolve, reject) => {
+    const customers: Customer[] = [];
+    fs.createReadStream(filePath)
+      .pipe(csv())
+      .on("data", (row) => {
+        customers.push({ email: row.email });
+      })
+      .on("end", () => {
+        resolve(customers);
+      })
+      .on("error", (error) => {
+        reject(error);
+      });
+  });
+}
+
+export function readItemData(filePath: string): Promise<Item[]> {
   return new Promise((resolve, reject) => {
     const items: Item[] = [];
     fs.createReadStream(filePath)
@@ -22,3 +39,4 @@ export function readCSV(filePath: string): Promise<Item[]> {
       });
   });
 }
+
