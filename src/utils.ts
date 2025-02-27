@@ -2,11 +2,15 @@ import { Item } from "./types";
 
 export function extractRequestedItems(
   emailBody: string,
-  items: Item[],
+  items: Item[]
 ): Item[] {
   const requestedItems: Item[] = [];
   items.forEach((item) => {
-    if (emailBody.includes(item.name)) {
+    const regex = new RegExp(
+      `\\b${item.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+      "i"
+    );
+    if (regex.test(emailBody)) {
       requestedItems.push(item);
     }
   });
