@@ -4,6 +4,7 @@
   },
   "dependencies": {
     "@azure/identity": "^4.6.0",
+    "@azure/msal-node": "^3.2.3",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "csv-parser": "^3.2.0",
     "dotenv": "^16.4.7",

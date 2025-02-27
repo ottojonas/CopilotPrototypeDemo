@@ -1,6 +1,4 @@
-import * as dotenv from "dotenv";
-dotenv.config({ path: "env/.env.dev" });
-
+import { config } from "./config";
 import { processEmails } from "./emailService";
 
 processEmails().catch(console.error);
