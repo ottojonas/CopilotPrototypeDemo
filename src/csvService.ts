@@ -21,17 +21,31 @@ export function readCustomerData(filePath: string): Promise<Customer[]> {
 
 export function readItemData(filePath: string): Promise<Item[]> {
   return new Promise((resolve, reject) => {
-    const items: Item[] = [];
+    const itemMap: { [name: string]: { total: number; count: number } } = {};
     fs.createReadStream(filePath)
       .pipe(csv())
       .on("data", (row) => {
-        items.push({
-          id: row.id,
-          name: row.name,
-          price: parseFloat(row.price),
-        });
+        const name = row.name;
+        const price = parseFloat(row.price);
+        if (!isNaN(price)) {
+          if (itemMap[name]) {
+            itemMap[name].total += price;
+            itemMap[name].count += 1;
+          } else {
+            itemMap[name] = { total: price, count: 1 };
+          }
+        }
       })
       .on("end", () => {
+        const items: Item[] = Object.keys(itemMap).map((name) => ({
+          id: "",
+          name: name || "N/A",
+          price: isNaN(itemMap[name].total / itemMap[name].count)
+            ? 0
+            : parseFloat(
+                (itemMap[name].total / itemMap[name].count).toFixed(2)
+              ),
+        }));
         resolve(items);
       })
       .on("error", (error) => {
@@ -39,4 +53,3 @@ export function readItemData(filePath: string): Promise<Item[]> {
       });
   });
 }
-
