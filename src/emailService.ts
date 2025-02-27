@@ -92,11 +92,21 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
       done(null, accessToken);
     },
   });
+
+  const customers = await readCustomerData("demo_data/democustomerdata.csv");
+  const allowedDomains = customers.map((customer) =>
+    extractDomain(customer.email)
+  );
   const response = await client
     .api(`/users/${config.userId}/messages`)
     // .filter("from/emailAddress/address eq 'otto@purelydynamics.co.uk'")
     .get();
-  return response.value;
+
+  const filteredEmails = response.value.filter((email: any) => {
+    const senderDomain = extractDomain(email.from.emailAddress.address);
+    return allowedDomains.includes(senderDomain);
+  });
+  return filteredEmails;
 }
 
 // Send reply email
