@@ -172,6 +172,19 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
   return storedEmails;
 }
 
+async function getOrCreateQuotesRepliedFolder(client: Client): Promise<string> {
+  const folderName = "QuotesReplied";
+  const response = await client.api(`me/mailFolders`).get();
+  let folder = response.value.find((f: any) => f.displayName === folderName);
+  if (!folder) {
+    const newFolder = await client.api(`/me/mailFolders`).post({
+      displayname: folderName,
+    });
+    folder = newFolder;
+  }
+  return folder.id;
+}
+
 // Send reply email
 async function sendReplyEmail(
   accessToken: string,
@@ -204,6 +217,11 @@ async function sendReplyEmail(
     console.log(`Sending reply to: ${email.from.emailAddress.address}`);
     await client.api(`/me/messages/${email.id}/reply`).post(reply);
     console.log(`Reply sent to: ${email.from.emailAddress.address}`);
+    const folderId = await getOrCreateQuotesRepliedFolder(client);
+    await client.api(`/me/messages/${email.id}/move`).post({
+      destinationId: folderId,
+    });
+    console.log(`Moved email to QuotesReplied folder: ${email.id}`);
   } catch (error) {
     console.error("Error sending reply email: ", error);
   }
