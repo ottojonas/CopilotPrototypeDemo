@@ -213,7 +213,7 @@ async function sendReplyEmail(
 async function testEmailConnection() {
   try {
     const authCodeUrlParameters: AuthorizationUrlRequest = {
-      scopes: ["Mail.Read", "Mail.Send"],
+      scopes: ["Mail.Read", "Mail.Send", "Mail.ReadWrite"],
       redirectUri: config.redirectUri,
       codeChallenge: codeChallenge,
       codeChallengeMethod: "S256",
@@ -321,17 +321,6 @@ export async function processEmails() {
   } catch (error) {
     console.error("Error processing emails: ", error);
   }
-}
-
-async function markEmailAsReplied(accessToken: string, email: any) {
-  const client = Client.init({
-    authProvider: (done) => {
-      done(null, accessToken);
-    },
-  });
-  await client.api(`/me/messages/${email.id}/move`).post({
-    destinationId: `/users/${config.userId}/mailFolders/sent`,
-  });
 }
 
 testEmailConnection();
