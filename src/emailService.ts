@@ -78,7 +78,7 @@ async function captureAuthCodeFromRedirect(): Promise<string> {
 async function getAccessToken(authCode: string): Promise<string> {
   const tokenRequest: AuthorizationCodeRequest = {
     code: authCode,
-    scopes: ["Mail.Read", "Mail.Send"],
+    scopes: ["Mail.Read", "Mail.Send", "Mail.ReadWrite"],
     redirectUri: config.redirectUri,
     codeVerifier: codeVerifier,
   };
@@ -130,6 +130,7 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
     },
   });
 
+  console.log(`Fetching emails from user: ${config.userId}`);
   const customers = await readCustomerData("demo_data/democustomerdata.csv");
   const allowedDomains = customers.map((customer) =>
     extractDomain(customer.email)
@@ -216,6 +217,7 @@ async function testEmailConnection() {
       redirectUri: config.redirectUri,
       codeChallenge: codeChallenge,
       codeChallengeMethod: "S256",
+      prompt: "consent",
     };
     const authCodeUrl = await pca.getAuthCodeUrl(authCodeUrlParameters);
     console.log("Navigate to this URL to authenticate: ", authCodeUrl);
@@ -227,6 +229,7 @@ async function testEmailConnection() {
     // Capture the authorization code from the redirect URI
     const authCode = await captureAuthCodeFromRedirect();
 
+    console.log(`Using account: ${config.userId}`);
     const accessToken = await getAccessToken(authCode);
     const emails = await getEmailsFromOtto(accessToken);
 
@@ -236,7 +239,10 @@ async function testEmailConnection() {
       extractDomain(customer.email)
     );
   } catch (error) {
-    console.error("Error fetching emails: ", error);
+    console.error(
+      `Error fetching emails from account: ${config.userId}: `,
+      error
+    );
   }
 }
 
@@ -306,9 +312,6 @@ export async function processEmails() {
 
         await sendReplyEmail(accessToken, email, replyBody);
         console.log(`Sent reply to: ${email.from.emailAddress.address}`);
-
-        await markEmailAsReplied(accessToken, email);
-        console.log(`Marked email as replied: ${email.id}`);
       } else {
         console.log(
           `No requested items found in email from: ${email.from.emailAddress.address}`
