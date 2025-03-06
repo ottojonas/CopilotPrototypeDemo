@@ -19,9 +19,9 @@ export function extractRequestedItems(
 
 export function generateReplyEmail(requestedItems: Item[]): string {
   let reply =
-    "Thanks for using Teams Toolkit to create your declarative agent!\n\nHere are the quotes for the requested items:\n\n";
+    "Thanks for getting into contact with us!\n\nHere are the quotes for the requested items:\n\n";
   requestedItems.forEach((item) => {
-    reply += `Item: ${item.name}, Price: ${item.price}\n`;
+    reply += `Item: ${item.name}, Price: £${item.price} (Approx)\n\n Kind Regards, \n\n Otto`;
   });
   return reply;
 }
