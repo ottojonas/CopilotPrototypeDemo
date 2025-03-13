@@ -141,6 +141,7 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
   const itemNames = items.map((item) => item.name);
   const response = await client
     .api(`/users/${config.userId}/mailFolders/inbox/messages`)
+    .select("subject,from,body")
     .get();
 
   const filteredEmails = response.value.filter((email: any) => {
@@ -151,13 +152,6 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
     const hasRequestedItems = requestedItemNames.some((name) =>
       itemNames.includes(name)
     );
-
-    console.log(`Email from: ${email.from.emailAddress.address}`);
-    console.log(`Sender domain: ${senderDomain}`);
-    console.log(`Requested items: ${requestedItemNames.join(", ")}`);
-    console.log(`Is allowed domain: ${isAllowedDomain}`);
-    console.log(`Has requested items: ${hasRequestedItems}`);
-
     return isAllowedDomain || hasRequestedItems;
   });
 
