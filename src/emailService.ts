@@ -145,45 +145,57 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
 
   const filteredEmails = response.value.filter((email: any) => {
     const senderDomain = extractDomain(email.from.emailAddress.address);
-    const requestedItems = extractRequestedItems(email.bodyPreview, items);
+    const requestedItems = extractRequestedItems(email.body.content, items);
     const requestedItemNames = requestedItems.map((item) => item.name);
     const isAllowedDomain = allowedDomains.includes(senderDomain);
     const hasRequestedItems = requestedItemNames.some((name) =>
       itemNames.includes(name)
     );
+
+    console.log(`Email from: ${email.from.emailAddress.address}`);
+    console.log(`Sender domain: ${senderDomain}`);
+    console.log(`Requested items: ${requestedItemNames.join(", ")}`);
+    console.log(`Is allowed domain: ${isAllowedDomain}`);
+    console.log(`Has requested items: ${hasRequestedItems}`);
+
     return isAllowedDomain || hasRequestedItems;
   });
 
-  const csvFilePath = path.join(__dirname, '../demo_data/emails.csv')
-  fs.mkdirSync(path.dirname(csvFilePath), {recursive: true})
+  const csvFilePath = path.join(__dirname, "../demo_data/emails.csv");
+  fs.mkdirSync(path.dirname(csvFilePath), { recursive: true });
   const csvWriter = createObjectCsvWriter({
-    path: csvFilePath, 
+    path: csvFilePath,
     header: [
       { id: "from", title: "from" },
       { id: "subject", title: "subject" },
-      { id: "bodyPreview", title: "bodyPreview" },
+      // { id: "bodyPreview", title: "bodyPreview" },
       { id: "requestedItems", title: "requestedItems" },
       { id: "requestedItemPrices", title: "requestedItemPrices" },
       { id: "isAllowedDomain", title: "isAllowedDomain" },
     ],
+    append:true, 
   });
 
   const records = filteredEmails.map((email: any) => {
     const senderAddress = email.from.emailAddress.address;
     const senderDomain = extractDomain(senderAddress);
     const subject = email.subject;
-    const requestedItems = extractRequestedItems(email.bodyPreview, items);
+    const requestedItems = extractRequestedItems(email.body.content, items);
     const requestedItemNames = requestedItems.map((item) => item.name);
     const requestedItemPrices = requestedItems.map((item) => item.price);
     const isAllowedDomain = allowedDomains.includes(senderDomain);
+    const hasRequestedItems = requestedItemNames.some((name) =>
+      itemNames.includes(name)
+    );
 
     return {
       from: senderAddress,
       subject: subject,
-      bodyPreview: email.bodyPreview,
-      requestedItems: requestedItemNames.join(", "),
-      requestedItemPrices: requestedItemPrices.join(", "),
-      isAllowedDomain: isAllowedDomain,
+      // bodyPreview: email.body.content,
+      requestedItems: requestedItemNames.join(", ") || "FALSE",
+      requestedItemPrices: requestedItemPrices.join(", ") || "FALSE",
+      isAllowedDomain: isAllowedDomain.toString(),
+      hasRequestedItems: hasRequestedItems.toString(),
     };
   });
   await csvWriter.writeRecords(records);
@@ -339,7 +351,7 @@ export async function processEmails() {
 
     for (const email of emails) {
       console.log(`Processing email from: ${email.from.emailAddress.address}`);
-      const requestedItems = extractRequestedItems(email.bodyPreview, items);
+      const requestedItems = extractRequestedItems(email.body.content, items);
       console.log(
         `Requested items: ${requestedItems.map((item) => item.name).join(", ")}`
       );
