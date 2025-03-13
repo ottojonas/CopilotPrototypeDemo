@@ -8,10 +8,11 @@ import {
   RefreshTokenRequest,
 } from "@azure/msal-node";
 import { Client } from "@microsoft/microsoft-graph-client";
+import { createObjectCsvWriter } from "csv-writer";
 import crypto from "crypto";
 import http from "http";
 import url from "url";
-import fs from "fs";
+import * as fs from "fs";
 import path from "path";
 
 // Utility functions
@@ -122,7 +123,7 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   }
 }
 
-// Get emails from Otto
+// Get emails from xyz
 async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
   const client = Client.init({
     authProvider: (done) => {
@@ -152,7 +153,22 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
     );
     return isAllowedDomain || hasRequestedItems;
   });
-  filteredEmails.forEach((email: any) => {
+
+  const csvFilePath = path.join(__dirname, '../demo_data/emails.csv')
+  fs.mkdirSync(path.dirname(csvFilePath), {recursive: true})
+  const csvWriter = createObjectCsvWriter({
+    path: csvFilePath, 
+    header: [
+      { id: "from", title: "from" },
+      { id: "subject", title: "subject" },
+      { id: "bodyPreview", title: "bodyPreview" },
+      { id: "requestedItems", title: "requestedItems" },
+      { id: "requestedItemPrices", title: "requestedItemPrices" },
+      { id: "isAllowedDomain", title: "isAllowedDomain" },
+    ],
+  });
+
+  const records = filteredEmails.map((email: any) => {
     const senderAddress = email.from.emailAddress.address;
     const senderDomain = extractDomain(senderAddress);
     const subject = email.subject;
@@ -160,14 +176,18 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
     const requestedItemNames = requestedItems.map((item) => item.name);
     const requestedItemPrices = requestedItems.map((item) => item.price);
     const isAllowedDomain = allowedDomains.includes(senderDomain);
-    console.log(`Stored Email:
-      From: ${senderAddress}
-      Subject: ${subject}
-      Matched Items: ${requestedItemNames.join(", ")}
-      Approx Price of Item: ${requestedItemPrices}
-      Is Allowed Domain: ${isAllowedDomain}
-    `);
+
+    return {
+      from: senderAddress,
+      subject: subject,
+      bodyPreview: email.bodyPreview,
+      requestedItems: requestedItemNames.join(", "),
+      requestedItemPrices: requestedItemPrices.join(", "),
+      isAllowedDomain: isAllowedDomain,
+    };
   });
+  await csvWriter.writeRecords(records);
+  console.log(`Emails have been written to: ${csvFilePath}`);
   const storedEmails = filteredEmails;
   return storedEmails;
 }
