@@ -140,23 +140,29 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
   const itemNames = items.map((item) => item.name);
   const response = await client
     .api(`/users/${config.userId}/mailFolders/inbox/messages`)
+    .select("subject,from,body")
     .get();
 
   const filteredEmails = response.value.filter((email: any) => {
     const senderDomain = extractDomain(email.from.emailAddress.address);
-    const requestedItems = extractRequestedItems(email.bodyPreview, items);
+    const requestedItems = extractRequestedItems(email.body.content, items);
     const requestedItemNames = requestedItems.map((item) => item.name);
     const isAllowedDomain = allowedDomains.includes(senderDomain);
     const hasRequestedItems = requestedItemNames.some((name) =>
       itemNames.includes(name)
     );
+    console.log(`Email from: ${email.from.emailAddress.address}`);
+    console.log(`Sender domain: ${senderDomain}`);
+    console.log(`Requested items: ${requestedItemNames.join(", ")}`);
+    console.log(`Is allowed domain: ${isAllowedDomain}`);
+    console.log(`Has requested items: ${hasRequestedItems}`);
     return isAllowedDomain || hasRequestedItems;
   });
   filteredEmails.forEach((email: any) => {
     const senderAddress = email.from.emailAddress.address;
     const senderDomain = extractDomain(senderAddress);
     const subject = email.subject;
-    const requestedItems = extractRequestedItems(email.bodyPreview, items);
+    const requestedItems = extractRequestedItems(email.body.content, items);
     const requestedItemNames = requestedItems.map((item) => item.name);
     const requestedItemPrices = requestedItems.map((item) => item.price);
     const isAllowedDomain = allowedDomains.includes(senderDomain);
@@ -319,7 +325,7 @@ export async function processEmails() {
 
     for (const email of emails) {
       console.log(`Processing email from: ${email.from.emailAddress.address}`);
-      const requestedItems = extractRequestedItems(email.bodyPreview, items);
+      const requestedItems = extractRequestedItems(email.body.content, items);
       console.log(
         `Requested items: ${requestedItems.map((item) => item.name).join(", ")}`
       );
