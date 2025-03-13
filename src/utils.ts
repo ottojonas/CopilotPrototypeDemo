@@ -11,8 +11,9 @@ export function extractRequestedItems(
       "i"
     );
     if (regex.test(emailBody)) {
+      console.log(`Matched items: ${item.name}`)
       requestedItems.push(item);
-    }
+    } 
   });
   return requestedItems;
 }
