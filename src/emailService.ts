@@ -166,6 +166,7 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
       { id: "requestedItems", title: "requestedItems" },
       { id: "requestedItemPrices", title: "requestedItemPrices" },
       { id: "isAllowedDomain", title: "isAllowedDomain" },
+      { id: "labels", title: "labels" }, 
     ],
     append:true, 
   });
@@ -190,6 +191,7 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
       requestedItemPrices: requestedItemPrices.join(", ") || "FALSE",
       isAllowedDomain: isAllowedDomain.toString(),
       hasRequestedItems: hasRequestedItems.toString(),
+      labels: hasRequestedItems ? "items" : "noItems"
     };
   });
   await csvWriter.writeRecords(records);
