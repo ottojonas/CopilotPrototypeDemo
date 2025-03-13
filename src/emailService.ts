@@ -139,11 +139,17 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
 
   const items = await readItemData("demo_data/demoitemdata.csv");
   const itemNames = items.map((item) => item.name);
-  const response = await client
-    .api(`/users/${config.userId}/mailFolders/inbox/messages`)
-    .select("subject,from,body")
-    .get();
-
+  let allEmails: any[] = []
+  let response = await client.api(`/users/${config.userId}/mailFolders/inbox/messages`).top(100).get();
+  while(response.value && response.value.length > 0) {
+      allEmails = allEmails.concat(response.value); 
+      if (response["@odata.nextLink"]) {
+          response = await client.api(response["@odata.nextLink"]).get(); 
+      } else {
+          break; 
+      }
+  }
+    
   const filteredEmails = response.value.filter((email: any) => {
     const senderDomain = extractDomain(email.from.emailAddress.address);
     const requestedItems = extractRequestedItems(email.body.content, items);
@@ -162,7 +168,7 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
     header: [
       { id: "from", title: "from" },
       { id: "subject", title: "subject" },
-      // { id: "bodyPreview", title: "bodyPreview" },
+      { id: "content", title: "content" },
       { id: "requestedItems", title: "requestedItems" },
       { id: "requestedItemPrices", title: "requestedItemPrices" },
       { id: "isAllowedDomain", title: "isAllowedDomain" },
@@ -186,7 +192,7 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
     return {
       from: senderAddress,
       subject: subject,
-      // bodyPreview: email.body.content,
+      content: email.body.content,
       requestedItems: requestedItemNames.join(", ") || "FALSE",
       requestedItemPrices: requestedItemPrices.join(", ") || "FALSE",
       isAllowedDomain: isAllowedDomain.toString(),
@@ -196,8 +202,7 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
   });
   await csvWriter.writeRecords(records);
   console.log(`Emails have been written to: ${csvFilePath}`);
-  const storedEmails = filteredEmails;
-  return storedEmails;
+  return filteredEmails;
 }
 
 async function getOrCreateQuotesRepliedFolder(client: Client): Promise<string> {
@@ -315,35 +320,13 @@ function extractDomain(email: string): string {
 // Process emails
 export async function processEmails() {
   try {
-    let tokenResponse = loadToken();
-    let accessToken: string;
-
-    if (tokenResponse) {
-      console.log("Token loaded from cache.");
-      if (
-        tokenResponse.expiresOn &&
-        new Date(tokenResponse.expiresOn) > new Date()
-      ) {
-        accessToken = tokenResponse.accessToken;
-      } else {
-        console.log("Token expired, refreshing...");
-        accessToken = await refreshAccessToken(tokenResponse.refreshToken);
-      }
-    } else {
-      const authCode = await promptForAuthCode();
-      accessToken = await getAccessToken(authCode);
-    }
-
-    const items = await readItemData("demo_data/demoitemdata.csv");
-    const customers = await readCustomerData("demo_data/democustomerdata.csv");
-
-    const customerDomains = customers.map((customer) =>
-      extractDomain(customer.email)
-    );
+    let accessToken: string = await getValidAccessToken();
 
     console.log("Fetching emails...");
     const emails = await getEmailsFromOtto(accessToken);
     console.log(`Fetched ${emails.length} emails.`);
+
+    const items = await readItemData("demo_data/demoitemdata.csv");
 
     for (const email of emails) {
       console.log(`Processing email from: ${email.from.emailAddress.address}`);
@@ -369,4 +352,25 @@ export async function processEmails() {
   }
 }
 
-testEmailConnection();
+async function getValidAccessToken(): Promise<string> {
+  let tokenResponse = loadToken();
+  let accessToken: string;
+
+  if (tokenResponse) {
+    console.log("Token loaded from cache.");
+    if (
+      tokenResponse.expiresOn &&
+      new Date(tokenResponse.expiresOn) > new Date()
+    ) {
+      accessToken = tokenResponse.accessToken;
+    } else {
+      console.log("Token expired, refreshing...");
+      accessToken = await refreshAccessToken(tokenResponse.refreshToken);
+    }
+  } else {
+    const authCode = await promptForAuthCode();
+    accessToken = await getAccessToken(authCode);
+  }
+
+  return accessToken;
+}
