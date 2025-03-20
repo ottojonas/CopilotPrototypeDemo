@@ -1,36 +1,42 @@
 import { Item } from "./types";
-import crypto from 'crypto'; 
-import Fuse from 'fuse.js'
+import crypto from "crypto";
+import Fuse from "fuse.js";
 
 export function base64URLEncode(str: Buffer): string {
-    return str.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ""); 
+  return str
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
 }
 
 export function sha256(buffer: Buffer): Buffer {
-    return crypto.createHash("sha256").update(buffer).digest();
+  return crypto.createHash("sha256").update(buffer).digest();
 }
 
 export function extractDomain(email: string): string {
-    return email.substring(email.lastIndexOf("@") + 1)
+  return email.substring(email.lastIndexOf("@") + 1);
 }
 
+// ! Responds to all emails with all possible matches
+// ! Should store possible matches and check for matches with csv then respond with matched items
 export function extractRequestedItems(
   emailBody: string,
   items: Item[]
 ): Item[] {
-    const fuse = new Fuse(items, {keys: ["name"], threshold: 0.3})
-    const words = emailBody.split(/\s+/)
+  const fuse = new Fuse(items, { keys: ["name"], threshold: 0.3 });
+  const words = emailBody.split(/\s+/);
   const requestedItems: Item[] = [];
   words.forEach((word) => {
-      const matches = fuse.search(word); 
-      if (matches.length > 0) {
-          const matchedItem = matches[0].item; 
-          if (!requestedItems.some((item) => item.name === matchedItem.name)) {
-              console.log(`Matched items: ${matchedItem}`)
-              requestedItems.push(matchedItem) 
-          }
+    const matches = fuse.search(word);
+    if (matches.length > 0) {
+      const matchedItem = matches[0].item;
+      if (!requestedItems.some((item) => item.name === matchedItem.name)) {
+        console.log(`Matched items: ${matchedItem.name}`);
+        requestedItems.push(matchedItem);
       }
-  })
+    }
+  });
   return requestedItems;
 }
 
