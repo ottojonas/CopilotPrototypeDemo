@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "start": "ts-node src/index.ts"
+    "start": "ts-node scripts/cacheClearing.ts && ts-node src/index.ts"
   },
   "dependencies": {
     "@azure/identity": "^4.6.0",

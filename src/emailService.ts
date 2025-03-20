@@ -62,7 +62,7 @@ export class EmailService {
     const allowedDomains = customers.map((customer) => extractDomain(customer.email)); // Define allowedDomains here
     const itemNames = items.map((item) => item.name);
   
-    const records = emails.map((email: any) => {
+  const records = emails.map((email: any) => {
       const senderAddress = email.from.emailAddress.address;
       const senderDomain = extractDomain(senderAddress);
       const requestedItems = extractRequestedItems(email.body.content, items);
@@ -104,6 +104,22 @@ export class EmailService {
     console.log(`Emails have been written to: ${csvFilePath}`);
   }
 
+  async getOrCreateFolder(folderName: string): Promise<string> {
+      try {
+          const response = await this.client.api(`/me/mailFolders`).filter(`displayName eq '${folderName}'`).get(); 
+          if (response.value && response.value.length > 0) {
+              return response.value[0].id; 
+          }
+          const newFolder = await this.client.api(`/me/maliFolders`).post({
+              displayName: folderName, 
+          })
+          return newFolder.id 
+      } catch (error) {
+          console.error(`Error getting or creating folder ${folderName}: ${error}`)
+          throw error 
+      }
+  }
+
   async sendReply(email: any, replyBody: string): Promise<void> {
     const reply = {
       message: {
@@ -126,6 +142,12 @@ export class EmailService {
     console.log(`Sending reply to: ${email.from.emailAddress.address}`);
     await this.client.api(`/me/messages/${email.id}/reply`).post(reply);
     console.log(`Reply sent to: ${email.from.emailAddress.address}`);
+
+    const folderId = await this.getOrCreateFolder("QuotesReplied")
+    await this.client.api(`/me/messages/${email.id}/move`).post({
+        destinationId: folderId, 
+    })
+    console.log(`Email moved to folder: ${folderId}`)
   }
 
   async processEmails(): Promise<void> {
