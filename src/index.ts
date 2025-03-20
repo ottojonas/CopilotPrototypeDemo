@@ -1,4 +1,11 @@
 import { config } from "./config";
-import { processEmails } from "./emailService";
+import { AuthService } from "./authService"
+import { EmailService } from "./emailService"
 
-processEmails().catch(console.error);
+async function main() {
+    const authService = new AuthService(config.clientId, config.clientSecret, config.tenantId, config.redirectUri)
+    const emailService = new EmailService(authService) 
+    await emailService.processEmails(); 
+}
+
+main().catch(console.error) 
