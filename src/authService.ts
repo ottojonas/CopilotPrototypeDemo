@@ -27,12 +27,16 @@ export class AuthService {
 
   async getValidAccessToken(): Promise<string> {
     let tokenResponse = this.loadToken();
+    console.log("Checking for valid access token...") 
     if (tokenResponse && new Date(tokenResponse.expiresOn) > new Date()) {
+        console.log("Valid access token found in cache")
       return tokenResponse.accessToken;
     }
     if (tokenResponse?.refreshToken) {
+        console.log("Access token expired. \n Attempting to regenerate token...")
       return await this.refreshAccessToken(tokenResponse.refreshToken);
     }
+    console.log("No valid token found.\n Prompt user for new token...")
     const authCode = await this.promptForAuthCode();
     return await this.getAccessToken(authCode);
   }

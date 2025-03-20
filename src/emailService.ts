@@ -23,7 +23,7 @@ export class EmailService {
   }
 
   async fetchEmails(): Promise<any[]> {
-    console.log(`Fetching emails from user: ${config.userId}`);
+    console.log(`Fetching emails from user: ${config.userId}...`);
     let allEmails: any[] = [];
     let response = await this.client
       .api(`/users/${config.userId}/mailFolders/inbox/messages`)
@@ -35,6 +35,7 @@ export class EmailService {
       if (response["@odata.nextLink"]) {
         response = await this.client.api(response["@odata.nextLink"]).get();
       } else {
+          console.log("No new emails to fetch")
         break;
       }
     }
@@ -57,52 +58,52 @@ export class EmailService {
     });
   }
 
-  async saveEmailsToCsv(emails: any[], items: any[]): Promise<void> {
-    const customers = await readCustomerData("demo_data/democustomerdata.csv");
-    const allowedDomains = customers.map((customer) => extractDomain(customer.email)); // Define allowedDomains here
-    const itemNames = items.map((item) => item.name);
+  // async saveEmailsToCsv(emails: any[], items: any[]): Promise<void> {
+  //   const customers = await readCustomerData("demo_data/democustomerdata.csv");
+  //   const allowedDomains = customers.map((customer) => extractDomain(customer.email)); // Define allowedDomains here
+  //   const itemNames = items.map((item) => item.name);
   
-  const records = emails.map((email: any) => {
-      const senderAddress = email.from.emailAddress.address;
-      const senderDomain = extractDomain(senderAddress);
-      const requestedItems = extractRequestedItems(email.body.content, items);
-      const requestedItemNames = requestedItems.map((item) => item.name);
-      const requestedItemPrices = requestedItems.map((item) => item.price);
-      const isAllowedDomain = allowedDomains.includes(senderDomain);
-      const hasRequestedItems = requestedItemNames.some((name) => itemNames.includes(name));
+  // const records = emails.map((email: any) => {
+  //     const senderAddress = email.from.emailAddress.address;
+  //     const senderDomain = extractDomain(senderAddress);
+  //     const requestedItems = extractRequestedItems(email.body.content, items);
+  //     const requestedItemNames = requestedItems.map((item) => item.name);
+  //     const requestedItemPrices = requestedItems.map((item) => item.price);
+  //     const isAllowedDomain = allowedDomains.includes(senderDomain);
+  //     const hasRequestedItems = requestedItemNames.some((name) => itemNames.includes(name));
   
-      return {
-        from: senderAddress,
-        subject: email.subject,
-        content: email.body.content,
-        requestedItems: requestedItemNames.join(", ") || "FALSE",
-        requestedItemPrices: requestedItemPrices.join(", ") || "FALSE",
-        isAllowedDomain: isAllowedDomain.toString(),
-        hasRequestedItems: hasRequestedItems.toString(),
-        labels: hasRequestedItems ? "items" : "noItems",
-        quoteRequested: hasRequestedItems ? "YES" : "NO",
-      };
-    });
+  //     return {
+  //       from: senderAddress,
+  //       subject: email.subject,
+  //       content: email.body.content,
+  //       requestedItems: requestedItemNames.join(", ") || "FALSE",
+  //       requestedItemPrices: requestedItemPrices.join(", ") || "FALSE",
+  //       isAllowedDomain: isAllowedDomain.toString(),
+  //       hasRequestedItems: hasRequestedItems.toString(),
+  //       labels: hasRequestedItems ? "items" : "noItems",
+  //       quoteRequested: hasRequestedItems ? "YES" : "NO",
+  //     };
+  //   });
   
-    const csvFilePath = path.join(__dirname, "../demo_data/emails.csv");
-    const csvWriter = createObjectCsvWriter({
-      path: csvFilePath,
-      header: [
-        { id: "from", title: "From" },
-        { id: "subject", title: "Subject" },
-        { id: "content", title: "Content" },
-        { id: "requestedItems", title: "Requested Items" },
-        { id: "requestedItemPrices", title: "Requested Item Prices" },
-        { id: "isAllowedDomain", title: "Is Allowed Domain" },
-        { id: "hasRequestedItems", title: "Has Requested Items" },
-        { id: "labels", title: "Labels" },
-        { id: "quoteRequested", title: "Quote Requested" },
-      ],
-    });
+  //   const csvFilePath = path.join(__dirname, "../demo_data/emails.csv");
+  //   const csvWriter = createObjectCsvWriter({
+  //     path: csvFilePath,
+  //     header: [
+  //       { id: "from", title: "From" },
+  //       { id: "subject", title: "Subject" },
+  //       { id: "content", title: "Content" },
+  //       { id: "requestedItems", title: "Requested Items" },
+  //       { id: "requestedItemPrices", title: "Requested Item Prices" },
+  //       { id: "isAllowedDomain", title: "Is Allowed Domain" },
+  //       { id: "hasRequestedItems", title: "Has Requested Items" },
+  //       { id: "labels", title: "Labels" },
+  //       { id: "quoteRequested", title: "Quote Requested" },
+  //     ],
+  //   });
   
-    await csvWriter.writeRecords(records);
-    console.log(`Emails have been written to: ${csvFilePath}`);
-  }
+  //   await csvWriter.writeRecords(records);
+  //   console.log(`Emails have been written to: ${csvFilePath}`);
+  // }
 
   async getOrCreateFolder(folderName: string): Promise<string> {
       try {
@@ -172,7 +173,7 @@ export class EmailService {
         }
       }
 
-      await this.saveEmailsToCsv(filteredEmails, items);
+      // await this.saveEmailsToCsv(filteredEmails, items);
     } catch (error) {
       console.error("Error processing emails: ", error);
     }
