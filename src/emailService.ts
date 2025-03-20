@@ -101,25 +101,57 @@ function saveToken(tokenResponse: any) {
 // Load token from file
 function loadToken(): any {
   if (fs.existsSync(tokenCachePath)) {
-    const tokenData = fs.readFileSync(tokenCachePath, "utf-8");
-    return JSON.parse(tokenData);
+    try{
+      const tokenData = fs.readFileSync(tokenCachePath, "utf-8");
+      return JSON.parse(tokenData);
+    } catch (error) {
+      console.error("Error loading token: ", error); 
+      fs.unlinkSync(tokenCachePath)
+    }
   }
   return null;
 }
 
 // Refresh access token
 async function refreshAccessToken(refreshToken: string): Promise<string> {
-  const tokenRequest: RefreshTokenRequest = {
-    refreshToken: refreshToken,
-    scopes: ["Mail.Read", "Mail.Send"],
-  };
+  try{
+    const tokenRequest: RefreshTokenRequest = {
+      refreshToken: refreshToken,
+      scopes: ["Mail.Read", "Mail.Send", "Mail.ReadWrite"],
+    };
+    const response = await pca.acquireTokenByRefreshToken(tokenRequest);
+    saveToken(response);
+    if (response) {
+      return response.accessToken;
+    } else {
+      throw new Error("Failed to fetch token ");
+    }
+  } catch (error) {
+    console.error("Error refreshing token: ", error)
+    if (fs.existsSync(tokenCachePath)) {
+      fs.unlinkSync(tokenCachePath);
+    }
+    console.log("Prompting user to reauthenticate...") 
+    
+    const authCodeUrlParameters: AuthorizationUrlRequest = {
+      scopes: ["Mail.Read", "Mail.Send", "Mail.ReadWrite"],
+      redirectUri: config.redirectUri, 
+      codeChallenge: codeChallenge, 
+      codeChallengeMethod: "S256", 
+      prompt: "consent", 
+    }; 
+    const authCodeUrl = await pca.getAuthCodeUrl(authCodeUrlParameters)
 
-  const response = await pca.acquireTokenByRefreshToken(tokenRequest);
-  saveToken(response);
-  if (response) {
-    return response.accessToken;
-  } else {
-    throw new Error("Failed to fetch token ");
+    const open = require("open")
+    await open(authCodeUrl)
+
+    const authCode = await captureAuthCodeFromRedirect(); 
+
+    if (!authCode) {
+      throw new Error("Authorization code is required for reauthentication")
+    }
+    
+    return await getAccessToken(authCode)
   }
 }
 
@@ -173,6 +205,7 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
       { id: "requestedItemPrices", title: "requestedItemPrices" },
       { id: "isAllowedDomain", title: "isAllowedDomain" },
       { id: "labels", title: "labels" }, 
+      { id: "quoteRequested", title: "quoteRequested" } 
     ],
     append:true, 
   });
@@ -197,7 +230,8 @@ async function getEmailsFromOtto(accessToken: string): Promise<any[]> {
       requestedItemPrices: requestedItemPrices.join(", ") || "FALSE",
       isAllowedDomain: isAllowedDomain.toString(),
       hasRequestedItems: hasRequestedItems.toString(),
-      labels: hasRequestedItems ? "items" : "noItems"
+      labels: hasRequestedItems ? "items" : "noItems",
+      quoteRequested: hasRequestedItems ? "YES" : "NO"
     };
   });
   await csvWriter.writeRecords(records);
@@ -374,3 +408,5 @@ async function getValidAccessToken(): Promise<string> {
 
   return accessToken;
 }
+
+testEmailConnection()
